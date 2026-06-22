@@ -20,6 +20,17 @@ namespace HoppingPlatformer.Player
         private IPlayerInput _input;
         private PlayerStateMachine _stateMachine;
         private InputBuffer<JumpDirection> _inputBuffer;
+        private IJumpService _jumpService;
+        private IInteractionResolver _interactionResolver;
+
+        private PlatformView _currentPlatform;
+        private PlayerAbilities _abilities;
+
+        //private IdleState _idleState;
+        //private JumpingState _jumpingState;
+        //private FallingState _fallingState;
+        //private VictoryState _victoryState;
+        //private DeadState _deadState;
 
         private void Awake()
         {
@@ -31,8 +42,16 @@ namespace HoppingPlatformer.Player
 
             _inputBuffer = new InputBuffer<JumpDirection>(_inputBufferDuration);
 
+            _interactionResolver = new PlatformInteractionResolver();
+
             if (_mouseInput != null)
                 _mouseInput.Init(transform);
+
+            //_idleState = new IdleState(this);
+            //_jumpingState = new JumpingState(this);
+            //_fallingState = new FallingState(this);
+            //_victoryState = new VictoryState(this);
+            //_deadState = new DeadState(this);
         }
 
         private void OnEnable()
@@ -52,7 +71,8 @@ namespace HoppingPlatformer.Player
 
         private void HandleJumpRequested(JumpDirection direction)
         {
-            _stateMachine.HandleJump(direction);
+            Debug.Log($"Requested Jump Direction: {direction}");
+            //_stateMachine.HandleJump(direction);
         }
 
         private void BufferInput(JumpDirection direction)
@@ -72,9 +92,11 @@ namespace HoppingPlatformer.Player
             ExecuteJump(direction);
         }
 
-        public void Init()
+        public void Init(LevelRuntime level)
         {
             EnterIdle();
+
+            _jumpService = new HexJumpService(level);
         }
 
         public bool TryConsumeBufferedJump(out JumpDirection direction)
@@ -82,9 +104,43 @@ namespace HoppingPlatformer.Player
             return _inputBuffer.TryConsume(Time.time, out direction);
         }
 
-        public void ExecuteJump(JumpDirection direction)
+        private void ExecuteJump(JumpDirection direction)
+        {
+            JumpResult result = _jumpService.ResolveJump(_currentPlatform, direction, _abilities.JumpDistance);
+
+            if (!result.Success)
+            {
+                StartFall(result.FailedPosition);
+                return;
+            }
+
+            StartJump(result.Platform);
+        }
+
+        private void StartJump(PlatformView target)
+        {
+            EnterJumping();
+
+            Vector3 platformOffset = new(0.0f, 0.125f);
+
+            Vector3 targetPosition = target.transform.position + platformOffset;
+
+            _mover.JumpTo(transform, targetPosition, () => Land(target));
+        }
+
+        private void StartFall(HexPos targetPosition)
         {
 
+        }
+
+        private void Land(PlatformView target)
+        {
+
+        }
+
+        private void ResolveInteraction(PlatformView platform)
+        {
+            _interactionResolver.Resolve(platform, this);
         }
 
         public void RaiseDeadEvent()
@@ -97,6 +153,16 @@ namespace HoppingPlatformer.Player
 
         }
 
+        public void EnterIdle()
+        {
+            _stateMachine.ChangeState(new IdleState(this));
+        }
+
+        public void EnterJumping()
+        {
+            _stateMachine.ChangeState(new JumpingState(this));
+        }
+
         public void EnterFalling()
         {
             _stateMachine.ChangeState(new FallingState(this));
@@ -107,9 +173,9 @@ namespace HoppingPlatformer.Player
             _stateMachine.ChangeState(new VictoryState(this));
         }
 
-        public void EnterIdle()
+        public void EnterDead()
         {
-            _stateMachine.ChangeState(new IdleState(this));
+            _stateMachine.ChangeState(new DeadState(this));
         }
     }
 }

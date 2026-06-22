@@ -1,0 +1,16 @@
+{
+    "name": "HoppingPlatformer.Application",
+    "rootNamespace": "HoppingPlatformer.Application",
+    "references": [
+        "GUID:d05ab504447415349a2b2c23ac2bf4ca"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
